@@ -1,0 +1,18 @@
+name = "movie-tracker-bot"
+main = "src/worker.ts"
+compatibility_date = "2026-08-12"
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "movie-tracker-bot-db"
+database_id = "00000000-0000-0000-0000-000000000000" # placeholder — replace after `wrangler login` + `wrangler d1 create movie-tracker-bot-db`
+migrations_dir = "drizzle"
+
+[triggers]
+crons = [
+  "0 9 * * 1",  # weekly gate check for the biweekly digest (Mon 09:00 UTC)
+  "0 9 * * *",  # daily release-day reminder check (09:00 UTC)
+]
