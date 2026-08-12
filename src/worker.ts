@@ -1,15 +1,6 @@
-import { BotError, webhookCallback } from 'grammy';
-import { createBot } from './bot/bot.js';
-import { createDb } from './db/client.js';
-import { runDigest } from './jobs/digest.js';
-import { runReminders } from './jobs/reminders.js';
+import { buildApp, type Env } from './composition/buildApp.js';
 
-export interface Env {
-  DB: D1Database;
-  TELEGRAM_BOT_TOKEN: string;
-  TMDB_API_KEY: string;
-  WEBHOOK_SECRET: string;
-}
+export type { Env };
 
 // Must match wrangler.toml's [triggers] crons exactly.
 const WEEKLY_DIGEST_GATE_CRON = '0 9 * * 1';
@@ -17,23 +8,8 @@ const DAILY_REMINDER_CRON = '0 9 * * *';
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
-    const bot = createBot(env);
-    const handleUpdate = webhookCallback(bot, 'cloudflare-mod', {
-      secretToken: env.WEBHOOK_SECRET,
-    });
-    try {
-      return await handleUpdate(request);
-    } catch (error) {
-      if (error instanceof BotError) {
-        // Webhook mode: bot.catch() never fires (only handleUpdates/long-polling
-        // uses it) — handleUpdate always throws, so this is the actual error
-        // boundary. Respond 200 regardless so Telegram doesn't retry an update
-        // that will keep failing the same way.
-        console.error('Error while handling update:', error.error);
-        return new Response('ok');
-      }
-      throw error;
-    }
+    const app = buildApp(env);
+    return app.telegramBotApp.handleWebhook(request);
   },
 
   async scheduled(
@@ -41,14 +17,11 @@ export default {
     env: Env,
     _ctx: ExecutionContext,
   ): Promise<void> {
+    const app = buildApp(env);
     if (controller.cron === WEEKLY_DIGEST_GATE_CRON) {
-      const db = createDb(env);
-      const bot = createBot(env);
-      await runDigest(db, bot, env.TMDB_API_KEY);
+      await app.digestService.run();
     } else if (controller.cron === DAILY_REMINDER_CRON) {
-      const db = createDb(env);
-      const bot = createBot(env);
-      await runReminders(db, bot);
+      await app.reminderService.run();
     } else {
       console.warn(`Unexpected cron trigger: ${controller.cron}`);
     }
