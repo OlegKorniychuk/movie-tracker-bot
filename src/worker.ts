@@ -1,8 +1,6 @@
-import { buildApp, type Env } from './composition/buildApp.js';
+import { buildApp } from './composition/buildApp.js';
 
-export type { Env };
-
-// Must match wrangler.toml's [triggers] crons exactly.
+// Must match wrangler.jsonc's triggers.crons exactly.
 const WEEKLY_DIGEST_GATE_CRON = '0 9 * * 1';
 const DAILY_REMINDER_CRON = '0 9 * * *';
 

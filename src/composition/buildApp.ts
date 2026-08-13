@@ -14,13 +14,6 @@ import { PickService } from '../services/PickService.js';
 import { ReminderService } from '../services/ReminderService.js';
 import { SubscriptionService } from '../services/SubscriptionService.js';
 
-export interface Env {
-  DB: D1Database;
-  TELEGRAM_BOT_TOKEN: string;
-  TMDB_API_KEY: string;
-  WEBHOOK_SECRET: string;
-}
-
 export interface App {
   telegramBotApp: TelegramBotApp;
   digestService: DigestService;
