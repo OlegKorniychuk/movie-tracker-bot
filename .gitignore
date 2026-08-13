@@ -4,3 +4,4 @@ dist
 .dev.vars
 .wrangler
 *.log
+src/types/worker-configuration.d.ts

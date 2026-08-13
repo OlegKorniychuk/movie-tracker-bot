@@ -4,8 +4,13 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --env dev",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:prod": "wrangler deploy --env prod",
+    "cf-typegen": "wrangler types ./src/types/worker-configuration.d.ts",
+    "db:migrate:dev:local": "wrangler d1 migrations apply movie-tracker-bot-db-dev --env dev --local",
+    "db:migrate:dev:remote": "wrangler d1 migrations apply movie-tracker-bot-db-dev --env dev --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply movie-tracker-bot-db-prod --env prod --remote",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -18,14 +23,13 @@
     "url": "git+https://github.com/OlegKorniychuk/movie-tracker-bot.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Oleh Korniichuk",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/OlegKorniychuk/movie-tracker-bot/issues"
   },
   "homepage": "https://github.com/OlegKorniychuk/movie-tracker-bot#readme",
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260812.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
     "drizzle-kit": "^0.31.10",

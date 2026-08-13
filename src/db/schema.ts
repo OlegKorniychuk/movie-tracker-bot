@@ -1,10 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
-
-export interface CastMember {
-  name: string;
-  role: string;
-}
+import type { CastMember } from '../domain/Movie.js';
 
 export const movies = sqliteTable(
   'movies',
