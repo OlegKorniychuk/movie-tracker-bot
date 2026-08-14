@@ -1,11 +1,12 @@
 import { InlineKeyboard, type Bot } from 'grammy';
 import { formatReleaseDate } from '../../formatDate.js';
 import type { PickService } from '../../services/PickService.js';
+import { BotEventHandler } from '../botEventHandler.js';
 
 const NO_PICKS_MESSAGE =
   'Немає запланованих нагадувань. Обирайте фільми з афіші кнопкою «🎬 Хочу подивитись».';
 
-export class MymoviesCommandHandler {
+export class MymoviesCommandHandler implements BotEventHandler {
   constructor(private readonly pickService: PickService) {}
 
   register(bot: Bot): void {

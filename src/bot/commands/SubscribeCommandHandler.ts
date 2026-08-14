@@ -1,5 +1,6 @@
 import type { Bot } from 'grammy';
 import type { SubscriptionService } from '../../services/SubscriptionService.js';
+import { BotEventHandler } from '../botEventHandler.js';
 
 const WELCOME_MESSAGE = `Привіт! Раз на два тижні надсилатиму афішу нових релізів у кіно.
 
@@ -8,7 +9,7 @@ const WELCOME_MESSAGE = `Привіт! Раз на два тижні надси�
 /unsubscribe — відписатися від афіші
 /mymovies — переглянути заплановані нагадування`;
 
-export class SubscribeCommandHandler {
+export class SubscribeCommandHandler implements BotEventHandler {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
   register(bot: Bot): void {

@@ -1,3 +1,7 @@
+import { CancelCallbackHandler } from '../bot/callbacks/CancelCallbackHandler.js';
+import { PickCallbackHandler } from '../bot/callbacks/PickCallbackHandler.js';
+import { MymoviesCommandHandler } from '../bot/commands/MymoviesCommandHandler.js';
+import { SubscribeCommandHandler } from '../bot/commands/SubscribeCommandHandler.js';
 import { DigestMessageFormatter } from '../bot/DigestMessageFormatter.js';
 import { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import { createDb } from '../db/client.js';
@@ -40,11 +44,17 @@ export function buildApp(env: Env): App {
   const subscriptionService = new SubscriptionService(subscriptionRepo);
   const pickService = new PickService(trackedPickRepo);
 
+  const telegramEventHandlers = [
+    new SubscribeCommandHandler(subscriptionService),
+    new MymoviesCommandHandler(pickService),
+    new PickCallbackHandler(pickService),
+    new CancelCallbackHandler(pickService),
+  ];
+
   const telegramBotApp = new TelegramBotApp(
     env.TELEGRAM_BOT_TOKEN,
     env.WEBHOOK_SECRET,
-    subscriptionService,
-    pickService,
+    telegramEventHandlers,
   );
 
   const digestService = new DigestService(
