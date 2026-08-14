@@ -1,11 +1,11 @@
-import type { Bot } from 'grammy';
 import { messages } from '../bot/messages.js';
+import type { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import { TrackedPickRepository } from '../repositories/TrackedPickRepository.js';
 
 export class ReminderService {
   constructor(
     private readonly trackedPickRepo: TrackedPickRepository,
-    private readonly bot: Bot,
+    private readonly telegramBotApp: TelegramBotApp,
   ) {}
 
   async run(): Promise<void> {
@@ -20,9 +20,7 @@ export class ReminderService {
     const sentPickIds: number[] = [];
     for (const pick of due) {
       try {
-        await this.bot.api.sendMessage(pick.chatId, messages.pickReminder(pick.uaTitle), {
-          parse_mode: 'HTML',
-        });
+        await this.telegramBotApp.sendMessage(pick.chatId, messages.pickReminder(pick.uaTitle));
         sentPickIds.push(pick.pickId);
       } catch (err) {
         console.error(`Failed to send reminder for pick ${pick.pickId}:`, err);

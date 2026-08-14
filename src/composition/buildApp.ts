@@ -42,29 +42,26 @@ export function buildApp(env: Env): App {
   const subscriptionService = new SubscriptionService(subscriptionRepo);
   const pickService = new PickService(trackedPickRepo);
 
+  const telegramBotApp = new TelegramBotApp(env.TELEGRAM_BOT_TOKEN, env.WEBHOOK_SECRET);
+
   const telegramEventHandlers = [
-    new SubscribeCommandHandler(subscriptionService),
-    new MymoviesCommandHandler(pickService),
+    new SubscribeCommandHandler(subscriptionService, telegramBotApp),
+    new MymoviesCommandHandler(pickService, telegramBotApp),
     new PickCallbackHandler(pickService),
     new CancelCallbackHandler(pickService),
   ];
-
-  const telegramBotApp = new TelegramBotApp(
-    env.TELEGRAM_BOT_TOKEN,
-    env.WEBHOOK_SECRET,
-    telegramEventHandlers,
-  );
+  telegramBotApp.registerHandlers(telegramEventHandlers);
 
   const digestService = new DigestService(
     movieRepo,
     subscriptionRepo,
     digestStateRepo,
     sourceService,
-    telegramBotApp.bot,
+    telegramBotApp,
     new DigestMessageFormatter(),
   );
 
-  const reminderService = new ReminderService(trackedPickRepo, telegramBotApp.bot);
+  const reminderService = new ReminderService(trackedPickRepo, telegramBotApp);
 
   return { telegramBotApp, digestService, reminderService };
 }

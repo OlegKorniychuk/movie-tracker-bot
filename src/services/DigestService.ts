@@ -1,5 +1,5 @@
-import type { Bot } from 'grammy';
 import { DigestMessageFormatter } from '../bot/DigestMessageFormatter.js';
+import type { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import type { Movie } from '../domain/Movie.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
 import { MovieRepository } from '../repositories/MovieRepository.js';
@@ -17,7 +17,7 @@ export class DigestService {
     private readonly subscriptionRepo: SubscriptionRepository,
     private readonly digestStateRepo: DigestStateRepository,
     private readonly sourceService: MovieSourceService,
-    private readonly bot: Bot,
+    private readonly telegramBotApp: TelegramBotApp,
     private readonly formatter: DigestMessageFormatter,
   ) {}
 
@@ -72,18 +72,10 @@ export class DigestService {
     const caption = this.formatter.formatCaption(movie);
     const keyboard = this.formatter.buildKeyboard(movie.id);
     try {
-      if (movie.posterUrl) {
-        await this.bot.api.sendPhoto(chatId, movie.posterUrl, {
-          caption,
-          parse_mode: 'HTML',
-          reply_markup: keyboard,
-        });
-      } else {
-        await this.bot.api.sendMessage(chatId, caption, {
-          parse_mode: 'HTML',
-          reply_markup: keyboard,
-        });
-      }
+      await this.telegramBotApp.sendMessage(chatId, caption, {
+        photoUrl: movie.posterUrl,
+        keyboard,
+      });
     } catch (err) {
       console.error(`Failed to send digest movie ${movie.id} to chat ${chatId}:`, err);
     }
