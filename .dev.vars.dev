@@ -1,0 +1,4 @@
+# Empty on purpose. Only exists so wrangler's createTestHarness (via Jest +
+# --experimental-vm-modules) doesn't hit an ENOENT-in-catch bug when it looks
+# for this file during config resolution. Actual test secrets come from
+# WorkerInput.secrets in test/support/harness.ts, not from here.
