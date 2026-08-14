@@ -1,13 +1,13 @@
-import type { Bot } from 'grammy';
 import { DigestMessageFormatter } from '../bot/DigestMessageFormatter.js';
+import type { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import type { Movie } from '../domain/Movie.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
 import { MovieRepository } from '../repositories/MovieRepository.js';
 import { SubscriptionRepository } from '../repositories/SubscriptionRepository.js';
-import { MovieAggregationService } from './MovieAggregationService.js';
+import { MovieSourceService } from './MovieSourceService.js';
 
 const DIGEST_INTERVAL_DAYS = 14;
-const DIGEST_WINDOW_DAYS = 28;
+const DIGEST_WINDOW_DAYS = 14;
 const SEND_DELAY_MS = 350; // stay well under Telegram's per-chat rate limit
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -16,8 +16,8 @@ export class DigestService {
     private readonly movieRepo: MovieRepository,
     private readonly subscriptionRepo: SubscriptionRepository,
     private readonly digestStateRepo: DigestStateRepository,
-    private readonly aggregationService: MovieAggregationService,
-    private readonly bot: Bot,
+    private readonly sourceService: MovieSourceService,
+    private readonly telegramBotApp: TelegramBotApp,
     private readonly formatter: DigestMessageFormatter,
   ) {}
 
@@ -30,10 +30,10 @@ export class DigestService {
       return;
     }
 
-    const merged = await this.aggregationService.fetchAndMerge();
-    await this.movieRepo.upsertMany(merged);
-
     const windowEnd = this.isoDateDaysFromNow(DIGEST_WINDOW_DAYS);
+    const fetched = await this.sourceService.fetchUpcoming(windowEnd);
+    await this.movieRepo.upsertMany(fetched);
+
     const newMovies = await this.movieRepo.findUndigestedInWindow(windowEnd);
 
     const now = new Date().toISOString();
@@ -72,18 +72,10 @@ export class DigestService {
     const caption = this.formatter.formatCaption(movie);
     const keyboard = this.formatter.buildKeyboard(movie.id);
     try {
-      if (movie.posterUrl) {
-        await this.bot.api.sendPhoto(chatId, movie.posterUrl, {
-          caption,
-          parse_mode: 'HTML',
-          reply_markup: keyboard,
-        });
-      } else {
-        await this.bot.api.sendMessage(chatId, caption, {
-          parse_mode: 'HTML',
-          reply_markup: keyboard,
-        });
-      }
+      await this.telegramBotApp.sendMessage(chatId, caption, {
+        photoUrl: movie.posterUrl,
+        keyboard,
+      });
     } catch (err) {
       console.error(`Failed to send digest movie ${movie.id} to chat ${chatId}:`, err);
     }

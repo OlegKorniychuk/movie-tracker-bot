@@ -73,7 +73,9 @@ query movies($first: Int $skip: Int $statusOffline: [MovieStatusOffline!] $cinem
 
   constructor(private readonly cinemaId: string = PlanetakinoSource.DEFAULT_CINEMA_ID) {}
 
-  async fetchUpcoming(): Promise<Movie[]> {
+  // windowEnd unused: GraphQL pagination already costs ~3 requests regardless
+  // of how many movies are in range, so there's nothing to bound here.
+  async fetchUpcoming(_windowEnd: string): Promise<Movie[]> {
     const movies: Movie[] = [];
     let skip = 0;
     let totalCount = Infinity;

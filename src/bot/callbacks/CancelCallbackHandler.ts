@@ -1,7 +1,8 @@
 import type { Bot } from 'grammy';
 import type { PickService } from '../../services/PickService.js';
+import { BotEventHandler } from '../botEventHandler.js';
 
-export class CancelCallbackHandler {
+export class CancelCallbackHandler implements BotEventHandler {
   constructor(private readonly pickService: PickService) {}
 
   register(bot: Bot): void {

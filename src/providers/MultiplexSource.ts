@@ -5,6 +5,22 @@ import type { MovieSource } from './MovieSource.js';
 
 const JSON_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f' };
 
+// Genitive forms, as used in the /soon page's "20 серпня" day headers.
+const UKRAINIAN_MONTHS: Record<string, number> = {
+  січня: 0,
+  лютого: 1,
+  березня: 2,
+  квітня: 3,
+  травня: 4,
+  червня: 5,
+  липня: 6,
+  серпня: 7,
+  вересня: 8,
+  жовтня: 9,
+  листопада: 10,
+  грудня: 11,
+};
+
 export class MultiplexSource implements MovieSource {
   private static readonly SOON_URL = 'https://multiplex.ua/soon';
   private static readonly MOVIE_URL = (id: string) => `https://multiplex.ua/movie/${id}`;
@@ -14,8 +30,8 @@ export class MultiplexSource implements MovieSource {
   private static readonly DETAIL_PAGE_CONCURRENCY = 5;
   private static readonly COUNTRY_LABEL = 'Виробництво:';
 
-  async fetchUpcoming(): Promise<Movie[]> {
-    const ids = await this.getUpcomingMovieIds();
+  async fetchUpcoming(windowEnd: string): Promise<Movie[]> {
+    const ids = await this.getUpcomingMovieIds(windowEnd);
     const details = await mapWithConcurrency(ids, MultiplexSource.DETAIL_PAGE_CONCURRENCY, (id) =>
       this.getMovieDetail(id),
     );
@@ -32,15 +48,44 @@ export class MultiplexSource implements MovieSource {
     return response.text();
   }
 
-  private async getUpcomingMovieIds(): Promise<string[]> {
+  // The page has no year in its day headers ("20 серпня") since it only ever
+  // lists future dates — roll forward to next year if the current year's
+  // reading would already be in the past (handles Dec→Jan listings).
+  private parseElDayDate(text: string): string | null {
+    const [dayStr, monthName] = text.trim().split(/\s+/);
+    const day = dayStr ? Number(dayStr) : NaN;
+    const month = monthName ? UKRAINIAN_MONTHS[monthName] : undefined;
+    if (!Number.isInteger(day) || month === undefined) return null;
+
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    let candidate = new Date(Date.UTC(now.getUTCFullYear(), month, day));
+    if (candidate < today) {
+      candidate = new Date(Date.UTC(now.getUTCFullYear() + 1, month, day));
+    }
+    return candidate.toISOString().slice(0, 10);
+  }
+
+  // Only collects ids from day-blocks within the window — the page lists
+  // premieres for months out, and fetching a detail page per id is the
+  // dominant cost of this source (see Free-plan 50-subrequest cap).
+  private async getUpcomingMovieIds(windowEnd: string): Promise<string[]> {
     const html = await this.fetchHtml(MultiplexSource.SOON_URL);
     const $ = cheerio.load(html);
     const ids = new Set<string>();
 
-    $('a.soon_fm').each((_, el) => {
-      const href = $(el).attr('href');
-      const id = href?.match(/\/movie\/(\d+)/)?.[1];
-      if (id) ids.add(id);
+    $('.soon_el').each((_, block) => {
+      const dateText = $(block).find('p.el_day_date').first().text();
+      const isoDate = this.parseElDayDate(dateText);
+      if (isoDate === null || isoDate > windowEnd) return;
+
+      $(block)
+        .find('a.soon_fm')
+        .each((_, el) => {
+          const href = $(el).attr('href');
+          const id = href?.match(/\/movie\/(\d+)/)?.[1];
+          if (id) ids.add(id);
+        });
     });
 
     return Array.from(ids);
