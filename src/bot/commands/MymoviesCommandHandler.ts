@@ -1,10 +1,7 @@
 import { InlineKeyboard, type Bot } from 'grammy';
-import { formatReleaseDate } from '../../formatDate.js';
 import type { PickService } from '../../services/PickService.js';
 import { BotEventHandler } from '../botEventHandler.js';
-
-const NO_PICKS_MESSAGE =
-  'Немає запланованих нагадувань. Обирайте фільми з афіші кнопкою «🎬 Хочу подивитись».';
+import { messages } from '../messages.js';
 
 export class MymoviesCommandHandler implements BotEventHandler {
   constructor(private readonly pickService: PickService) {}
@@ -16,13 +13,13 @@ export class MymoviesCommandHandler implements BotEventHandler {
       const picks = await this.pickService.listActive(ctx.chat.id);
 
       if (picks.length === 0) {
-        await ctx.reply(NO_PICKS_MESSAGE);
+        await ctx.reply(messages.noPicks);
         return;
       }
 
       for (const pick of picks) {
         const keyboard = new InlineKeyboard().text('❌ Скасувати', `cancel:${pick.pickId}`);
-        await ctx.reply(`🎬 ${pick.uaTitle}\n📅 ${formatReleaseDate(pick.releaseDate)}`, {
+        await ctx.reply(messages.myMoviesEntry(pick.uaTitle, pick.releaseDate), {
           reply_markup: keyboard,
         });
       }

@@ -1,5 +1,5 @@
 import type { Bot } from 'grammy';
-import { escapeHtml } from '../escapeHtml.js';
+import { messages } from '../bot/messages.js';
 import { TrackedPickRepository } from '../repositories/TrackedPickRepository.js';
 
 export class ReminderService {
@@ -20,11 +20,9 @@ export class ReminderService {
     const sentPickIds: number[] = [];
     for (const pick of due) {
       try {
-        await this.bot.api.sendMessage(
-          pick.chatId,
-          `🎉 Сьогодні прем'єра: <b>${escapeHtml(pick.uaTitle)}</b>!`,
-          { parse_mode: 'HTML' },
-        );
+        await this.bot.api.sendMessage(pick.chatId, messages.pickReminder(pick.uaTitle), {
+          parse_mode: 'HTML',
+        });
         sentPickIds.push(pick.pickId);
       } catch (err) {
         console.error(`Failed to send reminder for pick ${pick.pickId}:`, err);

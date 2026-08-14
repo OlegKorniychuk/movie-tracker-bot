@@ -1,13 +1,7 @@
 import type { Bot } from 'grammy';
 import type { SubscriptionService } from '../../services/SubscriptionService.js';
 import { BotEventHandler } from '../botEventHandler.js';
-
-const WELCOME_MESSAGE = `Привіт! Раз на два тижні надсилатиму афішу нових релізів у кіно.
-
-Натисніть кнопку під фільмом, щоб отримати нагадування в день прем'єри.
-
-/unsubscribe — відписатися від афіші
-/mymovies — переглянути заплановані нагадування`;
+import { messages } from '../messages.js';
 
 export class SubscribeCommandHandler implements BotEventHandler {
   constructor(private readonly subscriptionService: SubscriptionService) {}
@@ -15,12 +9,12 @@ export class SubscribeCommandHandler implements BotEventHandler {
   register(bot: Bot): void {
     bot.command(['start', 'subscribe'], async (ctx) => {
       await this.subscriptionService.subscribe(ctx.chat.id);
-      await ctx.reply(WELCOME_MESSAGE);
+      await ctx.reply(messages.welcome);
     });
 
     bot.command('unsubscribe', async (ctx) => {
       await this.subscriptionService.unsubscribe(ctx.chat.id);
-      await ctx.reply('Відписано від афіші. Повернутися можна командою /subscribe.');
+      await ctx.reply(messages.unsubscribed);
     });
   }
 }
