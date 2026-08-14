@@ -7,13 +7,12 @@ import { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import { createDb } from '../db/client.js';
 import { MultiplexSource } from '../providers/MultiplexSource.js';
 import { PlanetakinoSource } from '../providers/PlanetakinoSource.js';
-import { TmdbEnricher } from '../providers/TmdbEnricher.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
 import { MovieRepository } from '../repositories/MovieRepository.js';
 import { SubscriptionRepository } from '../repositories/SubscriptionRepository.js';
 import { TrackedPickRepository } from '../repositories/TrackedPickRepository.js';
 import { DigestService } from '../services/DigestService.js';
-import { MovieAggregationService } from '../services/MovieAggregationService.js';
+import { MovieSourceService } from '../services/MovieSourceService.js';
 import { PickService } from '../services/PickService.js';
 import { ReminderService } from '../services/ReminderService.js';
 import { SubscriptionService } from '../services/SubscriptionService.js';
@@ -36,10 +35,9 @@ export function buildApp(env: Env): App {
   const trackedPickRepo = new TrackedPickRepository(db);
   const digestStateRepo = new DigestStateRepository(db);
 
-  const aggregationService = new MovieAggregationService(
-    [new PlanetakinoSource(), new MultiplexSource()],
-    new TmdbEnricher(env.TMDB_API_KEY),
-  );
+  // Planetakino is the primary source (rich GraphQL feed, cheap request-wise);
+  // Multiplex is only ever hit if Planetakino errors — see MovieSourceService.
+  const sourceService = new MovieSourceService([new PlanetakinoSource(), new MultiplexSource()]);
 
   const subscriptionService = new SubscriptionService(subscriptionRepo);
   const pickService = new PickService(trackedPickRepo);
@@ -61,7 +59,7 @@ export function buildApp(env: Env): App {
     movieRepo,
     subscriptionRepo,
     digestStateRepo,
-    aggregationService,
+    sourceService,
     telegramBotApp.bot,
     new DigestMessageFormatter(),
   );

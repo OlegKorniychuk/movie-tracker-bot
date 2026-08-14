@@ -4,10 +4,10 @@ import type { Movie } from '../domain/Movie.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
 import { MovieRepository } from '../repositories/MovieRepository.js';
 import { SubscriptionRepository } from '../repositories/SubscriptionRepository.js';
-import { MovieAggregationService } from './MovieAggregationService.js';
+import { MovieSourceService } from './MovieSourceService.js';
 
 const DIGEST_INTERVAL_DAYS = 14;
-const DIGEST_WINDOW_DAYS = 28;
+const DIGEST_WINDOW_DAYS = 14;
 const SEND_DELAY_MS = 350; // stay well under Telegram's per-chat rate limit
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -16,7 +16,7 @@ export class DigestService {
     private readonly movieRepo: MovieRepository,
     private readonly subscriptionRepo: SubscriptionRepository,
     private readonly digestStateRepo: DigestStateRepository,
-    private readonly aggregationService: MovieAggregationService,
+    private readonly sourceService: MovieSourceService,
     private readonly bot: Bot,
     private readonly formatter: DigestMessageFormatter,
   ) {}
@@ -30,10 +30,10 @@ export class DigestService {
       return;
     }
 
-    const merged = await this.aggregationService.fetchAndMerge();
-    await this.movieRepo.upsertMany(merged);
-
     const windowEnd = this.isoDateDaysFromNow(DIGEST_WINDOW_DAYS);
+    const fetched = await this.sourceService.fetchUpcoming(windowEnd);
+    await this.movieRepo.upsertMany(fetched);
+
     const newMovies = await this.movieRepo.findUndigestedInWindow(windowEnd);
 
     const now = new Date().toISOString();
