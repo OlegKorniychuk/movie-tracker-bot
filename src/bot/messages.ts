@@ -17,4 +17,8 @@ export const messages = {
     `🎬 ${uaTitle}\n📅 ${formatReleaseDate(releaseDate)}`,
 
   pickReminder: (uaTitle: string) => `🎉 Сьогодні прем'єра: <b>${escapeHtml(uaTitle)}</b>!`,
+
+  pickConfirmed: "Нагадаємо у день прем'єри ✅",
+
+  cancelConfirmed: 'Скасовано',
 };

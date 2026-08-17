@@ -47,8 +47,8 @@ export function buildApp(env: Env): App {
   const telegramEventHandlers = [
     new SubscribeCommandHandler(subscriptionService, telegramBotApp),
     new MymoviesCommandHandler(pickService, telegramBotApp),
-    new PickCallbackHandler(pickService),
-    new CancelCallbackHandler(pickService),
+    new PickCallbackHandler(pickService, telegramBotApp),
+    new CancelCallbackHandler(pickService, telegramBotApp),
   ];
   telegramBotApp.registerHandlers(telegramEventHandlers);
 
