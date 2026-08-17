@@ -126,7 +126,10 @@ describe('digest cron (0 9 * * 1)', () => {
 
     const logs = server.getLogs();
     expect(
-      logs.some((log: { message: string }) => log.message.includes('PlanetakinoSource failed')),
+      logs.some(
+        (log: { message: string }) =>
+          log.message.includes('Movie source failed') && log.message.includes('PlanetakinoSource'),
+      ),
     ).toBe(true);
   });
 

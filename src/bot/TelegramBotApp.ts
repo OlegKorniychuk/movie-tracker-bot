@@ -1,4 +1,6 @@
 import { Bot, BotError, webhookCallback, type InlineKeyboard } from 'grammy';
+import { CallCounter } from '../logging/CallCounter.js';
+import { Logger } from '../logging/Logger.js';
 import { BotEventHandler } from './botEventHandler.js';
 
 export interface SendMessageOptions {
@@ -12,6 +14,8 @@ export class TelegramBotApp {
   constructor(
     token: string,
     private readonly webhookSecret: string,
+    private readonly logger: Logger,
+    private readonly callCounter: CallCounter,
   ) {
     this.bot = new Bot(token);
   }
@@ -22,16 +26,21 @@ export class TelegramBotApp {
 
   async sendMessage(chatId: number, text: string, options: SendMessageOptions = {}): Promise<void> {
     if (options.photoUrl) {
-      await this.bot.api.sendPhoto(chatId, options.photoUrl, {
-        caption: text,
-        parse_mode: 'HTML',
-        reply_markup: options.keyboard,
-      });
+      const photoUrl = options.photoUrl;
+      await this.callCounter.track(() =>
+        this.bot.api.sendPhoto(chatId, photoUrl, {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: options.keyboard,
+        }),
+      );
     } else {
-      await this.bot.api.sendMessage(chatId, text, {
-        parse_mode: 'HTML',
-        reply_markup: options.keyboard,
-      });
+      await this.callCounter.track(() =>
+        this.bot.api.sendMessage(chatId, text, {
+          parse_mode: 'HTML',
+          reply_markup: options.keyboard,
+        }),
+      );
     }
   }
 
@@ -47,7 +56,7 @@ export class TelegramBotApp {
         // uses it) — handleUpdate always throws, so this is the actual error
         // boundary. Respond 200 regardless so Telegram doesn't retry an update
         // that will keep failing the same way.
-        console.error('Error while handling update:', error.error);
+        this.logger.error('Error while handling update', { error: error.error });
         return new Response('ok');
       }
       throw error;

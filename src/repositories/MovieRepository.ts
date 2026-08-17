@@ -2,6 +2,7 @@ import { and, inArray, isNull, lte } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { movies as moviesTable } from '../db/schema.js';
 import { Movie } from '../domain/Movie.js';
+import type { Logger } from '../logging/Logger.js';
 
 // D1 caps bound parameters per query at 100 (well below vanilla SQLite's
 // 999), so a single `inArray`/batch over the full movie count blows past it.
@@ -21,14 +22,17 @@ export interface UpsertResult {
 }
 
 export class MovieRepository {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly logger: Logger,
+  ) {}
 
   // Movies with no release date can't be tracked (nothing to dedupe the
   // digest against, nothing to remind on) — skipped rather than persisted.
   async upsertMany(movies: Movie[]): Promise<UpsertResult> {
     const withDate = movies.filter((movie): movie is Movie & { releaseDate: string } => {
       if (movie.releaseDate === null) {
-        console.warn(`Skipping movie with no release date: "${movie.originalTitle}"`);
+        this.logger.warn('Skipping movie with no release date', { title: movie.originalTitle });
         return false;
       }
       return true;

@@ -1,4 +1,5 @@
 import { Movie, type CastMember } from '../domain/Movie.js';
+import type { CallCounter } from '../logging/CallCounter.js';
 import type { MovieSource } from './MovieSource.js';
 
 interface PlanetakinoNode {
@@ -71,7 +72,10 @@ query movies($first: Int $skip: Int $statusOffline: [MovieStatusOffline!] $cinem
 }
 `;
 
-  constructor(private readonly cinemaId: string = PlanetakinoSource.DEFAULT_CINEMA_ID) {}
+  constructor(
+    private readonly callCounter: CallCounter,
+    private readonly cinemaId: string = PlanetakinoSource.DEFAULT_CINEMA_ID,
+  ) {}
 
   // windowEnd unused: GraphQL pagination already costs ~3 requests regardless
   // of how many movies are in range, so there's nothing to bound here.
@@ -81,20 +85,22 @@ query movies($first: Int $skip: Int $statusOffline: [MovieStatusOffline!] $cinem
     let totalCount = Infinity;
 
     while (skip < totalCount) {
-      const response = await fetch(PlanetakinoSource.ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: PlanetakinoSource.QUERY,
-          variables: {
-            first: PlanetakinoSource.PAGE_SIZE,
-            skip,
-            statusOffline: 'PUBLISHED_AT_ANNOUNCED',
-            cinemaId: this.cinemaId,
-            creditsFirst: PlanetakinoSource.CREDITS_PAGE_SIZE,
-          },
+      const response = await this.callCounter.track(() =>
+        fetch(PlanetakinoSource.ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: PlanetakinoSource.QUERY,
+            variables: {
+              first: PlanetakinoSource.PAGE_SIZE,
+              skip,
+              statusOffline: 'PUBLISHED_AT_ANNOUNCED',
+              cinemaId: this.cinemaId,
+              creditsFirst: PlanetakinoSource.CREDITS_PAGE_SIZE,
+            },
+          }),
         }),
-      });
+      );
 
       const result: PlanetakinoResponse = await response.json();
       if (result.errors) {

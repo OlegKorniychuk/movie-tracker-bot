@@ -1,11 +1,13 @@
 import { messages } from '../bot/messages.js';
 import type { TelegramBotApp } from '../bot/TelegramBotApp.js';
+import type { Logger } from '../logging/Logger.js';
 import { TrackedPickRepository } from '../repositories/TrackedPickRepository.js';
 
 export class ReminderService {
   constructor(
     private readonly trackedPickRepo: TrackedPickRepository,
     private readonly telegramBotApp: TelegramBotApp,
+    private readonly logger: Logger,
   ) {}
 
   async run(): Promise<void> {
@@ -13,7 +15,7 @@ export class ReminderService {
     const due = await this.trackedPickRepo.findDueReminders(today);
 
     if (due.length === 0) {
-      console.log('Reminders: nothing due today');
+      this.logger.info('Reminders: nothing due today');
       return;
     }
 
@@ -23,7 +25,7 @@ export class ReminderService {
         await this.telegramBotApp.sendMessage(pick.chatId, messages.pickReminder(pick.uaTitle));
         sentPickIds.push(pick.pickId);
       } catch (err) {
-        console.error(`Failed to send reminder for pick ${pick.pickId}:`, err);
+        this.logger.error('Failed to send reminder', { pickId: pick.pickId, error: err });
       }
     }
 

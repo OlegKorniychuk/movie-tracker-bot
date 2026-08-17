@@ -5,6 +5,8 @@ import { SubscribeCommandHandler } from '../bot/commands/SubscribeCommandHandler
 import { DigestMessageFormatter } from '../bot/DigestMessageFormatter.js';
 import { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import { createDb } from '../db/client.js';
+import { CallCounter } from '../logging/CallCounter.js';
+import { Logger } from '../logging/Logger.js';
 import { MultiplexSource } from '../providers/MultiplexSource.js';
 import { PlanetakinoSource } from '../providers/PlanetakinoSource.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
@@ -21,6 +23,8 @@ export interface App {
   telegramBotApp: TelegramBotApp;
   digestService: DigestService;
   reminderService: ReminderService;
+  logger: Logger;
+  callCounter: CallCounter;
 }
 
 // The composition root — the only place that touches `Env` bindings
@@ -29,20 +33,30 @@ export interface App {
 // or holds state beyond the object graph itself.
 export function buildApp(env: Env): App {
   const db = createDb(env);
+  const logger = new Logger();
+  const callCounter = new CallCounter();
 
-  const movieRepo = new MovieRepository(db);
+  const movieRepo = new MovieRepository(db, logger);
   const subscriptionRepo = new SubscriptionRepository(db);
   const trackedPickRepo = new TrackedPickRepository(db);
   const digestStateRepo = new DigestStateRepository(db);
 
   // Planetakino is the primary source (rich GraphQL feed, cheap request-wise);
   // Multiplex is only ever hit if Planetakino errors — see MovieSourceService.
-  const sourceService = new MovieSourceService([new PlanetakinoSource(), new MultiplexSource()]);
+  const sourceService = new MovieSourceService(
+    [new PlanetakinoSource(callCounter), new MultiplexSource(logger, callCounter)],
+    logger,
+  );
 
   const subscriptionService = new SubscriptionService(subscriptionRepo);
   const pickService = new PickService(trackedPickRepo);
 
-  const telegramBotApp = new TelegramBotApp(env.TELEGRAM_BOT_TOKEN, env.WEBHOOK_SECRET);
+  const telegramBotApp = new TelegramBotApp(
+    env.TELEGRAM_BOT_TOKEN,
+    env.WEBHOOK_SECRET,
+    logger,
+    callCounter,
+  );
 
   const telegramEventHandlers = [
     new SubscribeCommandHandler(subscriptionService, telegramBotApp),
@@ -59,9 +73,10 @@ export function buildApp(env: Env): App {
     sourceService,
     telegramBotApp,
     new DigestMessageFormatter(),
+    logger,
   );
 
-  const reminderService = new ReminderService(trackedPickRepo, telegramBotApp);
+  const reminderService = new ReminderService(trackedPickRepo, telegramBotApp, logger);
 
-  return { telegramBotApp, digestService, reminderService };
+  return { telegramBotApp, digestService, reminderService, logger, callCounter };
 }
