@@ -21,7 +21,7 @@ export default {
     } else if (controller.cron === DAILY_REMINDER_CRON) {
       await app.reminderService.run();
     } else {
-      console.warn(`Unexpected cron trigger: ${controller.cron}`);
+      app.logger.warn('Unexpected cron trigger', { cron: controller.cron });
     }
   },
 } satisfies ExportedHandler<Env>;

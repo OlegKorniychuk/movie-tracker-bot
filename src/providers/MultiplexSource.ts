@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { Movie, type CastMember } from '../domain/Movie.js';
+import { Logger } from '../logging/Logger.js';
 import { mapWithConcurrency } from '../mapWithConcurrency.js';
 import type { MovieSource } from './MovieSource.js';
 
@@ -29,6 +30,8 @@ export class MultiplexSource implements MovieSource {
 
   private static readonly DETAIL_PAGE_CONCURRENCY = 5;
   private static readonly COUNTRY_LABEL = 'Виробництво:';
+
+  constructor(private readonly logger: Logger) {}
 
   async fetchUpcoming(windowEnd: string): Promise<Movie[]> {
     const ids = await this.getUpcomingMovieIds(windowEnd);
@@ -199,7 +202,7 @@ export class MultiplexSource implements MovieSource {
     try {
       html = await this.fetchHtml(MultiplexSource.MOVIE_URL(id));
     } catch (err) {
-      console.warn(`Skipping multiplex movie ${id}: ${(err as Error).message}`);
+      this.logger.warn('Skipping multiplex movie', { id, error: err });
       return null;
     }
 

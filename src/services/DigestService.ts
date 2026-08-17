@@ -1,6 +1,7 @@
 import { DigestMessageFormatter } from '../bot/DigestMessageFormatter.js';
 import type { TelegramBotApp } from '../bot/TelegramBotApp.js';
 import type { Movie } from '../domain/Movie.js';
+import type { Logger } from '../logging/Logger.js';
 import { DigestStateRepository } from '../repositories/DigestStateRepository.js';
 import { MovieRepository } from '../repositories/MovieRepository.js';
 import { SubscriptionRepository } from '../repositories/SubscriptionRepository.js';
@@ -19,14 +20,16 @@ export class DigestService {
     private readonly sourceService: MovieSourceService,
     private readonly telegramBotApp: TelegramBotApp,
     private readonly formatter: DigestMessageFormatter,
+    private readonly logger: Logger,
   ) {}
 
   async run(): Promise<void> {
     const lastDigestAt = await this.digestStateRepo.getLastDigestAt();
     if (lastDigestAt !== null && this.daysSince(lastDigestAt) < DIGEST_INTERVAL_DAYS) {
-      console.log(
-        `Digest gated: last run ${lastDigestAt}, ${this.daysSince(lastDigestAt).toFixed(1)} days ago`,
-      );
+      this.logger.info('Digest gated', {
+        lastDigestAt,
+        daysSince: Number(this.daysSince(lastDigestAt).toFixed(1)),
+      });
       return;
     }
 
@@ -39,7 +42,7 @@ export class DigestService {
     const now = new Date().toISOString();
 
     if (newMovies.length === 0) {
-      console.log('Digest: no new movies in window to send');
+      this.logger.info('Digest: no new movies in window to send');
       await this.digestStateRepo.setLastDigestAt(now);
       return;
     }
@@ -48,7 +51,7 @@ export class DigestService {
     if (subscriberChatIds.length === 0) {
       // Nobody to send to — leave these movies undigested so whoever
       // subscribes later still gets them, instead of silently losing them.
-      console.log('Digest: no subscribers, leaving fetched movies undigested');
+      this.logger.info('Digest: no subscribers, leaving fetched movies undigested');
       await this.digestStateRepo.setLastDigestAt(now);
       return;
     }
@@ -77,7 +80,7 @@ export class DigestService {
         keyboard,
       });
     } catch (err) {
-      console.error(`Failed to send digest movie ${movie.id} to chat ${chatId}:`, err);
+      this.logger.error('Failed to send digest movie', { movieId: movie.id, chatId, error: err });
     }
   }
 

@@ -1,4 +1,5 @@
 import type { CastMember, Movie } from '../domain/Movie.js';
+import type { Logger } from '../logging/Logger.js';
 import type { MovieEnricher } from './MovieEnricher.js';
 
 interface SearchResponse {
@@ -32,7 +33,10 @@ export class TmdbEnricher implements MovieEnricher {
   private static readonly IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
   private static readonly CAST_LIMIT = 10;
 
-  constructor(private readonly apiKey: string) {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly logger: Logger,
+  ) {}
 
   async enrich(movie: Movie): Promise<Movie> {
     const missingDescription = movie.shortDescription === null;
@@ -65,9 +69,7 @@ export class TmdbEnricher implements MovieEnricher {
 
       return enriched;
     } catch (err) {
-      console.warn(
-        `TMDB enrichment failed for "${movie.originalTitle}": ${(err as Error).message}`,
-      );
+      this.logger.warn('TMDB enrichment failed', { title: movie.originalTitle, error: err });
       return movie;
     }
   }

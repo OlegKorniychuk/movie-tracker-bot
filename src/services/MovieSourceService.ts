@@ -1,4 +1,5 @@
 import type { Movie } from '../domain/Movie.js';
+import type { Logger } from '../logging/Logger.js';
 import type { MovieSource } from '../providers/MovieSource.js';
 
 // Sources are tried in order: the first is the real data source (Planetakino
@@ -7,7 +8,10 @@ import type { MovieSource } from '../providers/MovieSource.js';
 // kept only as a fallback of last resort). No merging: on success a source's
 // result is used as-is, nothing from a lower-priority source is mixed in.
 export class MovieSourceService {
-  constructor(private readonly sources: MovieSource[]) {}
+  constructor(
+    private readonly sources: MovieSource[],
+    private readonly logger: Logger,
+  ) {}
 
   async fetchUpcoming(windowEnd: string): Promise<Movie[]> {
     let lastError: unknown;
@@ -17,10 +21,11 @@ export class MovieSourceService {
         return await source.fetchUpcoming(windowEnd);
       } catch (err) {
         lastError = err;
-        console.warn(
-          `Movie source ${source.constructor.name} failed (${(err as Error).message}); ` +
-            (index + 1 < this.sources.length ? 'falling back to next source' : 'no sources left'),
-        );
+        this.logger.warn('Movie source failed', {
+          source: source.constructor.name,
+          error: err,
+          fallback: index + 1 < this.sources.length,
+        });
       }
     }
 
