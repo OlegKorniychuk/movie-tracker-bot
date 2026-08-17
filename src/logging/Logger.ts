@@ -5,7 +5,9 @@ function normalize(fields?: LogFields): LogFields | undefined {
   const out: LogFields = {};
   for (const [key, value] of Object.entries(fields)) {
     out[key] =
-      value instanceof Error ? { message: value.message, name: value.name, stack: value.stack } : value;
+      value instanceof Error
+        ? { message: value.message, name: value.name, stack: value.stack }
+        : value;
   }
   return out;
 }
