@@ -147,6 +147,10 @@ describe('bot commands', () => {
     const toasts = telegramCalls.filter((c) => c.method === 'answerCallbackQuery');
     expect(toasts).toHaveLength(1);
     expect(toasts[0]?.body.text).toBe("Нагадаємо у день прем'єри ✅");
+
+    const sends = telegramCalls.filter((c) => c.method === 'sendMessage');
+    expect(sends).toHaveLength(1);
+    expect(sends[0]?.body.text).toBe("Нагадаємо у день прем'єри ✅");
   });
 
   it('cancel:<pickId> callback cancels the tracked pick and answers with a confirmation toast', async () => {
@@ -165,6 +169,10 @@ describe('bot commands', () => {
     const toasts = telegramCalls.filter((c) => c.method === 'answerCallbackQuery');
     expect(toasts).toHaveLength(1);
     expect(toasts[0]?.body.text).toBe('Скасовано');
+
+    const sends = telegramCalls.filter((c) => c.method === 'sendMessage');
+    expect(sends).toHaveLength(1);
+    expect(sends[0]?.body.text).toBe('Скасовано');
   });
 
   it('rejects a webhook request with the wrong secret token and produces no side effects', async () => {
