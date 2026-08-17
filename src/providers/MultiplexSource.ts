@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { Movie, type CastMember } from '../domain/Movie.js';
+import { CallCounter } from '../logging/CallCounter.js';
 import { Logger } from '../logging/Logger.js';
 import { mapWithConcurrency } from '../mapWithConcurrency.js';
 import type { MovieSource } from './MovieSource.js';
@@ -31,7 +32,10 @@ export class MultiplexSource implements MovieSource {
   private static readonly DETAIL_PAGE_CONCURRENCY = 5;
   private static readonly COUNTRY_LABEL = 'Виробництво:';
 
-  constructor(private readonly logger: Logger) {}
+  constructor(
+    private readonly logger: Logger,
+    private readonly callCounter: CallCounter,
+  ) {}
 
   async fetchUpcoming(windowEnd: string): Promise<Movie[]> {
     const ids = await this.getUpcomingMovieIds(windowEnd);
@@ -42,9 +46,11 @@ export class MultiplexSource implements MovieSource {
   }
 
   private async fetchHtml(url: string): Promise<string> {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': MultiplexSource.USER_AGENT },
-    });
+    const response = await this.callCounter.track(() =>
+      fetch(url, {
+        headers: { 'User-Agent': MultiplexSource.USER_AGENT },
+      }),
+    );
     if (!response.ok) {
       throw new Error(`Multiplex request to ${url} failed: ${response.status}`);
     }

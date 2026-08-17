@@ -1,4 +1,5 @@
 import type { CastMember, Movie } from '../domain/Movie.js';
+import type { CallCounter } from '../logging/CallCounter.js';
 import type { Logger } from '../logging/Logger.js';
 import type { MovieEnricher } from './MovieEnricher.js';
 
@@ -36,6 +37,7 @@ export class TmdbEnricher implements MovieEnricher {
   constructor(
     private readonly apiKey: string,
     private readonly logger: Logger,
+    private readonly callCounter: CallCounter,
   ) {}
 
   async enrich(movie: Movie): Promise<Movie> {
@@ -83,7 +85,9 @@ export class TmdbEnricher implements MovieEnricher {
     });
     if (year !== null) params.set('year', String(year));
 
-    const response = await fetch(`${TmdbEnricher.BASE_URL}/search/movie?${params.toString()}`);
+    const response = await this.callCounter.track(() =>
+      fetch(`${TmdbEnricher.BASE_URL}/search/movie?${params.toString()}`),
+    );
     if (!response.ok) {
       throw new Error(`TMDB search request failed: ${response.status}`);
     }
@@ -92,8 +96,8 @@ export class TmdbEnricher implements MovieEnricher {
   }
 
   private async getMovieDetails(movieId: number): Promise<MovieDetails> {
-    const response = await fetch(
-      `${TmdbEnricher.BASE_URL}/movie/${movieId}?api_key=${this.apiKey}&language=uk-UA`,
+    const response = await this.callCounter.track(() =>
+      fetch(`${TmdbEnricher.BASE_URL}/movie/${movieId}?api_key=${this.apiKey}&language=uk-UA`),
     );
     if (!response.ok) {
       throw new Error(`TMDB movie details request for ${movieId} failed: ${response.status}`);
@@ -107,8 +111,8 @@ export class TmdbEnricher implements MovieEnricher {
   }
 
   private async getCredits(movieId: number): Promise<CastMember[]> {
-    const response = await fetch(
-      `${TmdbEnricher.BASE_URL}/movie/${movieId}/credits?api_key=${this.apiKey}`,
+    const response = await this.callCounter.track(() =>
+      fetch(`${TmdbEnricher.BASE_URL}/movie/${movieId}/credits?api_key=${this.apiKey}`),
     );
     if (!response.ok) {
       throw new Error(`TMDB credits request for ${movieId} failed: ${response.status}`);

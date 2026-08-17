@@ -1,4 +1,5 @@
 import { Bot, BotError, webhookCallback, type InlineKeyboard } from 'grammy';
+import { CallCounter } from '../logging/CallCounter.js';
 import { Logger } from '../logging/Logger.js';
 import { BotEventHandler } from './botEventHandler.js';
 
@@ -14,6 +15,7 @@ export class TelegramBotApp {
     token: string,
     private readonly webhookSecret: string,
     private readonly logger: Logger,
+    private readonly callCounter: CallCounter,
   ) {
     this.bot = new Bot(token);
   }
@@ -24,16 +26,21 @@ export class TelegramBotApp {
 
   async sendMessage(chatId: number, text: string, options: SendMessageOptions = {}): Promise<void> {
     if (options.photoUrl) {
-      await this.bot.api.sendPhoto(chatId, options.photoUrl, {
-        caption: text,
-        parse_mode: 'HTML',
-        reply_markup: options.keyboard,
-      });
+      const photoUrl = options.photoUrl;
+      await this.callCounter.track(() =>
+        this.bot.api.sendPhoto(chatId, photoUrl, {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: options.keyboard,
+        }),
+      );
     } else {
-      await this.bot.api.sendMessage(chatId, text, {
-        parse_mode: 'HTML',
-        reply_markup: options.keyboard,
-      });
+      await this.callCounter.track(() =>
+        this.bot.api.sendMessage(chatId, text, {
+          parse_mode: 'HTML',
+          reply_markup: options.keyboard,
+        }),
+      );
     }
   }
 
